@@ -1,0 +1,46 @@
+---
+alwaysApply: true
+description: Coding standards and best practices
+---
+
+# Coding Standards and Best Practices
+
+## Code Style
+- Use Laravel Pint for code style formatting
+- Add valid PHPDoc comments to all methods and classes
+- Verify PHPDoc comments exist and are aligned when changing methods
+- Methods in services available to JSON-RPC should include `@api` doc comment
+
+## Type Safety
+- Use strict types wherever possible (for returns and parameters)
+- When creating arrays, evaluate whether a model/object should be used instead
+
+## Error Handling
+- **ALWAYS use the Log Facade** for error logging: `Log::error($exception)`
+- **DO NOT use** the helper function `error_log()`
+- Ensure Log Facade is included in use statements
+
+## DateTime Handling
+- Always use `CarbonImmutable` or the `dtHelper()` function class
+- Database dates are assumed to be in UTC format: `YYYY-MM-DD HH:MM:SS`
+- Frontend/user dates are assumed in user's timezone and their date format
+- Use `DateTimeHelper` class to parse common datetime formats
+
+## Security Guidelines
+- Never log sensitive user data (passwords, API keys, personal information)
+- Use proper input validation and sanitization for all user inputs
+- Follow existing authentication and authorization patterns
+- Use parameterized queries through the existing Repository pattern
+- Validate file uploads and handle them securely
+
+## Performance Guidelines
+- Use existing Repository pattern instead of direct queries
+- Be mindful of N+1 query problems with related data
+- Consider database indexes when adding new query patterns
+- Use pagination for large result sets
+- Use batch tool calls when reading multiple related files
+- Use HTMX for efficient partial page updates
+- Use Laravel cache (file-based or Redis) for expensive operations
+
+## Backwards Compatibility
+- **DO NOT keep old code or build backwards compatibility** unless specifically called out

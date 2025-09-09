@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+description: Core project information and architecture overview
+---
+
+# Leantime Project Overview
+
+Leantime is an open source project management system designed for non-project managers. It combines strategy, planning, and execution in an easy-to-use interface.
+
+## Technology Stack
+- **Backend**: PHP 8.2+, Laravel framework with custom components
+- **Database**: MySQL 8.0+ or MariaDB 10.6+
+- **Frontend**: Modern JavaScript (ES6+), Webpack (Laravel Mix), Less CSS, HTMX
+- **Architecture**: Domain-driven design with plugin system
+
+## Key Directories
+- `app/Core/` - Framework core components and Laravel extensions
+- `app/Domain/` - Application domains organized by feature
+- `app/Plugins/` - Extension plugins
+- `public/` - Web root with assets and themes
+- `config/` - Configuration files
+- `tests/` - Test files (Unit and Acceptance)
+
+## Domain Structure
+Each domain in `app/Domain/` contains:
+- `Controllers/` - HTTP endpoints
+- `Hxcontrollers/` - HTMX-specific controllers  
+- `Repositories/` - Data access layer
+- `Services/` - Business logic
+- `Models/` - Data structures
+- `Templates/` - View templates (Blade/PHP)
+- `Js/` - Domain-specific JavaScript
+
+## Development Commands
+- `make run-dev` - Start development server (port 8090)
+- `make build-dev` - Build for development
+- `make build` - Build for production
+- `make unit-test` - Run unit tests
+- `make acceptance-test` - Run acceptance tests
+- `php bin/leantime [command]` - CLI commands

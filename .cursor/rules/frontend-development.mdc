@@ -1,0 +1,43 @@
+---
+globs: *.js,*.ts,*.less,*.css,*.blade.php,*.tpl.php
+description: Frontend development guidelines and patterns
+---
+
+# Frontend Development Guidelines
+
+## Technology Stack
+- Modern ES6+ JavaScript
+- Webpack for bundling (via Laravel Mix)
+- Less CSS preprocessor
+- HTMX for asynchronous requests
+- Mix of old and newer JavaScript (migration ongoing)
+
+## HTMX Usage
+- **Primary approach**: Use HTMX for information updates and reloads
+- **Secondary approach**: Use JavaScript for interactivity (editors, drag and drop, etc)
+- HTMX controllers are organized under `Hxcontrollers/` in each domain
+- Templates for HTMX calls should be in `templates/partials/`
+- Create components for reusable entities (ticket cards, project cards, user cards)
+
+## CSS Guidelines
+- Primary CSS files are in `public/assets/` included through `main.less`
+- Support theming based on CSS variables in `public/themes/`
+- **Always use CSS variables** for values like box-shadow, borders, paddings, colors, font sizes
+- Moving towards Tailwind CSS with `tw-*` prefix for all classes
+
+## JavaScript Requests
+- **Prefer HTMX** for most requests that expect information
+- Use `fetch` only when HTMX is not feasible
+- Use the JSON-RPC endpoint when requesting information from server using fetch
+- When using fetch, set `"credentials": "include"` and `'X-Requested-With': 'XMLHttpRequest'`
+
+## Template System
+- Dual template system: PHP templates (`.tpl.php`) and Blade templates (`.blade.php`)
+- Shared view folder at `app/Views/` for layouts, components, composers, sections
+- Use template composers to prepare view data before rendering
+- Theme support through `theme/` directory
+
+## Performance
+- Minimize JavaScript bundle size when adding new features
+- Optimize images and assets appropriately
+- Follow existing patterns for lazy loading and caching

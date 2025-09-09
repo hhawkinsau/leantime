@@ -49,7 +49,7 @@ RUN set -ex; \
 # Production stage
 FROM --platform=$TARGETPLATFORM php:8.3-fpm-alpine
 
-# Add production dependencies
+# Add production dependencies and Composer
 RUN apk add --no-cache \
     tini \
     nginx \
@@ -62,8 +62,14 @@ RUN apk add --no-cache \
     libjpeg-turbo \
     libzip \
     openldap \
-    icu-libs && \
+    icu-libs \
+    curl \
+    git \
+    unzip && \
     rm -rf /var/cache/apk/* /tmp/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy built extensions from builder
 COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
@@ -76,13 +82,13 @@ ARG PGID=1000
 # Set working directory
 WORKDIR /var/www/html
 
-# Install Leantime
-ARG LEAN_VERSION
-RUN set -ex; \
-    curl -fsSL --retry 3 https://github.com/Leantime/leantime/releases/download/v${LEAN_VERSION}/Leantime-v${LEAN_VERSION}.tar.gz -o leantime.tar.gz && \
-    tar xzf leantime.tar.gz --strip-components 1 && \
-    rm leantime.tar.gz && \
-    chown -R www-data:www-data .
+# Copy local Leantime source code
+COPY . /var/www/html/
+
+# Install Composer dependencies
+RUN cd /var/www/html && \
+    composer install --no-dev --optimize-autoloader --no-interaction && \
+    chown -R www-data:www-data /var/www/html
 
 # Set Permissions
 RUN set -ex; \
@@ -111,11 +117,11 @@ RUN set -ex; \
                /var/www/html/app/Plugins;
 
 # Copy configuration files
-COPY config/custom.ini /usr/local/etc/php/conf.d/
-COPY config/nginx.conf /etc/nginx/nginx.conf
-COPY config/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
-COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --chmod=0755 start.sh /start.sh
+COPY .docker/config/custom.ini /usr/local/etc/php/conf.d/
+COPY .docker/config/nginx.conf /etc/nginx/nginx.conf
+COPY .docker/config/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY .docker/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --chmod=0755 .docker/start.sh /start.sh
 
 # Switch to non-root user
 USER www-data

@@ -1,0 +1,35 @@
+---
+description: Configuration management and environment setup
+---
+
+# Configuration Management
+
+## Configuration Files
+- System administrators configure Leantime using `.env` files or environment variables
+- Configuration files stored in `config/` folder
+- Custom config loader in `app/Core/Configuration` loads env file, maps old config parameters, and merges with Laravel config
+- Configs can be extended by plugins
+
+## Laravel Configuration
+- All Laravel configs need to be stored in `laravelConfig` file inside core configuration folder
+- Variables editable by users should be added to `sample.env` and exposed via `LEAN_*` prefix
+- **Do not load custom PHP configs** from root config folder
+- `artisan publish` will not publish configs correctly - content needs to be added to `laravelConfig`
+
+## Redis Configuration
+- When Redis is available for services (queue, cache, sessions), check if admin has chosen to use Redis
+- Automatically load Redis config via respective ServiceProvider
+
+## Service Providers
+- List of ServiceProviders stored in `laravelConfig`
+- Important for application bootstrap and plugin loading
+
+## Environment Variables
+- Use `LEAN_*` prefix for user-configurable variables
+- Store in `config/.env.sample` as template
+- Copy to `config/.env` for local development
+- Environment variables take precedence over config files
+
+## Plugin Configuration
+- Plugins can extend configuration through their registration process
+- Plugin-specific configs should follow same patterns as core configuration

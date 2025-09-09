@@ -1,0 +1,92 @@
+---
+description: Development workflow and task approach guidelines
+---
+
+# Development Workflow
+
+## Task Approach Hierarchy
+When handling user requests, follow this priority order:
+
+1. **Simple Queries**: For straightforward questions about existing code, use Read/Grep tools directly
+2. **Code Modifications**: For changes to existing functionality, analyze current implementation first
+3. **New Features**: For new functionality, research similar existing patterns before implementing
+4. **Debugging**: For bug fixes, reproduce the issue first, then implement the fix
+5. **Complex Tasks**: For multi-step operations, use TodoWrite to plan before executing
+
+## Context Management
+
+### Working with Large Codebases
+- Use search tools (Grep, Glob) strategically to find relevant code before reading files
+- When multiple files might be relevant, batch tool calls to read them efficiently
+- Focus on understanding specific area of code related to user's request
+
+### Clarifying Requirements
+- Ask clarifying questions when user's request is ambiguous
+- When multiple implementation approaches are possible, present options to user
+- If unsure about existing patterns or conventions, research codebase first
+
+### Efficient Tool Usage
+- Use Task tool for complex searches that might require multiple rounds
+- Batch independent tool calls in single responses
+- Read related files together when working on connected functionality
+
+## Development Commands
+
+### Build Commands
+```bash
+# Install development dependencies
+make install-deps-dev
+
+# Install production dependencies  
+make install-deps
+
+# Build for development (with source maps)
+make build-dev
+
+# Build for production
+make build
+
+# Clear cache
+make clear-cache
+
+# Package for release
+make package
+
+# Build js/css using webpack
+npx mix
+```
+
+### CLI Commands
+Leantime CLI commands located in `app/Command` directory:
+```bash
+php bin/leantime [command]
+```
+
+#### Plugin Management Commands
+- `plugin:install <name>` - Install a plugin from folder/phar
+- `plugin:enable <name>` - Enable a specific plugin
+- `plugin:disable <name>` - Disable a specific plugin
+- `plugin:remove <name>` - Remove a plugin (executes uninstall hook)
+- `plugin:list [--installed=1] [--enabled=1]` - List plugins with optional filters
+
+#### System Commands
+- `system:update` - Update Leantime installation
+- `user:add` - Add a new user
+- `setting:save [key] [value]` - Save a system setting
+
+#### Database Commands
+- `migrate` or `db:migrate` - Run core & plugin migrations
+- `db:seed` - Seed initial/demo data
+- `migrate:fresh` - Fresh rebuild (drops all tables)
+- `db:backup` - Backup database
+
+#### Cache & Optimization Commands
+- `cache:clearAll` - Clear all caches (custom command)
+- `config:cache` - Cache configuration for faster loading
+- `optimize` - Optimize application performance
+
+#### Development Commands
+- `event:list` - List all registered events
+- `event:clear` - Clear event cache
+- `translation:check` - Check translation files
+- `email:test` - Test email configuration

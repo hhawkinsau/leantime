@@ -1,0 +1,42 @@
+---
+description: API development guidelines and patterns
+---
+
+# API Development Guidelines
+
+## JSON-RPC API
+Leantime provides a JSON-RPC API accessible through the API domain:
+- **Primary API protocol**: JSON-RPC via `Jsonrpc.php` controller
+- **Response format**: Standard JSON responses with consistent structure
+- **Authentication**: Token-based authentication with API keys
+- **Controllers**: Follow consistent pattern with `get`, `post`, `patch`, and `delete` methods
+
+## API Authentication
+Two types of API keys:
+1. **Leantime API Keys**: Act as service accounts, handled like regular users
+   - Username: API key name
+   - Password: API secret
+2. **Personal Access Tokens**: Created by users (requires AdvancedAuth plugin)
+   - Uses Laravel Sanctum for authentication
+   - Tokens authenticate the user owning them
+
+## API Development Patterns
+- API controllers provide structured access to service layers of all domains
+- Most public methods in service classes marked with `@api` annotation
+- API is a thin wrapper around service layer functionality
+
+## Deprecated API Controllers
+- Various API controllers in api domain modules return JSON
+- **Pattern is deprecated** - all JavaScript API calls should go through JSON-RPC API
+- Legacy controllers were used to enable JavaScript functionality
+
+## API Security
+- Validate all API inputs
+- Use proper authentication and authorization
+- Follow existing authentication patterns
+- Don't expose internal system information through API endpoints
+
+## Frontend API Usage
+- Use JSON-RPC endpoint when requesting information from server using fetch
+- Set `"credentials": "include"` and `'X-Requested-With': 'XMLHttpRequest'` for authentication
+- Prefer HTMX for most requests, use fetch only when HTMX is not feasible

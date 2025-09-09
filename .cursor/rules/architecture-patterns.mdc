@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+description: Architecture patterns and layer enforcement rules
+---
+
+# Architecture Patterns and Layer Enforcement
+
+## Layer Architecture
+Leantime follows a strict layered architecture:
+
+1. **Controllers** → **Services** → **Repositories** → **Database**
+2. **Controllers** handle HTTP requests and delegate to services
+3. **Services** contain business logic and orchestrate operations  
+4. **Repositories** access and manipulate data storage
+5. **Models** represent data structures
+
+## Layer Enforcement Rules
+- **Controllers should ONLY call services, NOT repositories**
+- **Services can call repositories and other services**
+- **Be careful with cross-domain service calls to avoid circular references**
+- **Services should validate input and throw exceptions when validation fails**
+
+## Data Layer (To Be Refactored)
+Current data layer uses:
+- Repository classes extending `Leantime\Core\Db\Repository`
+- Raw SQL queries with manual parameter binding
+- Database tables with `zp_` prefix (e.g., `zp_projects`, `zp_users`)
+- Simple models with public properties
+
+## HTTP Layer
+- `Frontcontroller` class routes requests to domain controllers
+- All controllers extend `Core/Controller/Controller.php`
+- Different request types: Standard, API (`ApiRequest`), HTMX (`HtmxRequest`)
+- Controllers return `Symfony\Component\HttpFoundation\Response` objects
+
+## Event System
+- Located in `Core/Events/`
+- Supports Events (fire-and-forget) and Filters (data modification)
+- String-based event names (refactoring target - should move to class-based)
+- Automatic discovery through `register.php` files
+- Heavy plugin integration support
+
+## Service Layer
+- Domain services implement `Leantime\Core\Domains\DomainService`
+- Services encapsulate business rules and coordinate repositories
+- Use filter system for plugin modifications
+- Public methods marked with `@api` annotation for stable API

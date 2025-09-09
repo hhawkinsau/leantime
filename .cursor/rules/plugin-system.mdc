@@ -1,0 +1,364 @@
+---
+description: Plugin system architecture and development guidelines
+---
+
+# Plugin System
+
+## Plugin Architecture
+- Plugins reside in `app/Plugins/` directory
+- Each plugin is self-contained with its own domain structure
+- Plugins can have their own vendors through Composer
+- Two formats: folder-based and phar-based (for marketplace plugins)
+
+## Plugin Types
+1. **System Plugins**: Core enabled plugins defined in config, always loaded, cannot be disabled via UI
+2. **Marketplace Plugins**: From Leantime marketplace, delivered as phar packages with license key validation
+3. **Custom Plugins**: Regular plugins or plugins in development (folder-based)
+
+## Plugin Integration Process
+
+### 1. Bootstrap Phase (Application Start)
+- `EventDispatcher::discoverEvents()` loads all domain `register.php` files
+- System plugins (defined in config) are loaded immediately
+- Routes are loaded for domains and system plugins only
+
+### 2. Middleware Phase (Request Processing)
+- `LoadPlugins` middleware runs on every request
+- Dispatches `pluginsStart` event to load user-enabled plugins
+- Dispatches `pluginsEvents` event for plugin registration activities
+- Dispatches `pluginsTerminate` event after request processing
+
+### 3. Plugin Loading Sequence
+```php
+// 1. System plugins loaded during bootstrap
+if (isset($config->plugins)) {
+    foreach (explode(',', $config->plugins) as $plugin) {
+        include_once "app/Plugins/{$plugin}/register.php";
+    }
+}
+
+// 2. User-enabled plugins loaded via middleware
+$pluginService = app()->make(Plugins::class);
+$enabledPlugins = $pluginService->getEnabledPlugins();
+foreach ($enabledPlugins as $plugin) {
+    include_once "app/Plugins/{$plugin->foldername}/register.php";
+}
+```
+
+### 4. Plugin Registration Process
+Each plugin's `register.php` file:
+```php
+use Leantime\Domain\Plugins\Services\Registration;
+
+$registration = app()->makeWith(Registration::class, ['pluginId' => 'PluginName']);
+
+// Register components
+$registration->registerLanguageFiles(['en-US']);
+$registration->addMenuItem([...], 'section', [priority]);
+$registration->addCss(['plugin.css']);
+$registration->addFooterJs(['plugin.js']);
+$registration->registerMiddleware([...]);
+```
+
+## Plugin Structure Requirements
+```
+PluginName/
+├── composer.json          # Plugin metadata and PSR-4 autoloading
+├── register.php           # Bootstrap file (REQUIRED)
+├── bootstrap.php          # Optional additional initialization
+├── Controllers/           # HTTP endpoints
+├── Services/              # Business logic
+├── Models/                # Data structures
+├── Views/                 # Blade template files
+├── Language/              # Internationalization files (.ini format)
+├── dist/                  # Compiled assets (CSS/JS)
+├── routes.php             # Optional route definitions
+└── Docs/                  # Optional documentation
+```
+
+## Frontcontroller Routing Pattern
+
+Leantime uses a frontcontroller pattern for automatic routing:
+
+### URL Structure
+- `/module/controller/method` maps to `ModuleName\Controllers\ControllerName::method()`
+- `/hx/module/controller/method` maps to `ModuleName\Hxcontrollers\ControllerName::method()`
+- Plugin controllers use namespace: `Leantime\Plugins\ModuleName\Controllers\ControllerName`
+
+### Controller Resolution
+```php
+// In Frontcontroller::getClassPath()
+$classname = 'Leantime\\Plugins\\'.$moduleName.'\\'.$controllerType.'\\'.$actionName;
+
+// Check if plugin is enabled
+$enabledPlugins = app()->make(Plugins::class)->getEnabledPlugins();
+$pluginEnabled = false;
+foreach ($enabledPlugins as $key => $obj) {
+    if (strtolower($obj->foldername) !== strtolower($moduleName)) {
+        continue;
+    }
+    $pluginEnabled = true;
+    break;
+}
+
+if (!$pluginEnabled) {
+    return false; // Plugin not enabled
+}
+```
+
+### Example URL Mapping
+- `/pomodoro/show` → `Leantime\Plugins\Pomodoro\Controllers\Pomodoro::show()`
+- `/hx/pomodoro/update` → `Leantime\Plugins\Pomodoro\Hxcontrollers\Pomodoro::update()`
+
+## Registration Service Methods
+
+### Asset Registration
+- `addCss(array $paths)` - Registers CSS files via `leantime.*.afterLinkTags` event
+- `addFooterJs(array $paths)` - Registers JS files via `leantime.*.beforeBodyClose` event
+- `addHeaderJs(array $paths)` - Registers JS files in document head
+- `registerManifestFolder()` - Auto-registers `dist/` folder with Mix manifest
+
+### Menu Integration
+- `addMenuItem(array $item, string $section, array $location)` - Adds menu items
+- Uses filter: `leantime.domain.menu.repositories.menu.getMenuStructure.menuStructures.{section}`
+- Menu items support icons, tooltips, and hierarchical placement
+
+### Language Integration
+- `registerLanguageFiles(array $languages)` - Registers language files
+- Auto-discovers language files in `Language/` directory
+- Supports both folder and phar plugin formats
+- Caches language arrays for performance
+
+### Middleware Registration
+- `registerMiddleware(array $middleware)` - Registers custom middleware
+- Uses filter: `leantime.core.http.httpkernel.*.plugins_middleware`
+- Middleware runs after core middleware pipeline
+
+## Route Loading
+- System plugin routes loaded during bootstrap
+- User plugin routes loaded via `pluginsEvents` event (priority 50)
+- Routes defined in `routes.php` files within plugin directories
+- RouteLoader handles both domain and plugin route discovery
+
+## Asset Management
+- Plugins use Mix manifest system for asset versioning
+- `dist/` folder automatically registered with manifest
+- Assets served through `/api/static-asset/{plugin-slug}/...` endpoints
+- Supports both compiled and raw assets
+
+## Event System Integration
+- Plugins hook into events using `EventDispatcher::add_event_listener()`
+- Plugins modify data using `EventDispatcher::add_filter_listener()`
+- Key events: `pluginsStart`, `pluginsEvents`, `pluginsTerminate`
+- Template events: `leantime.*.afterLinkTags`, `leantime.*.beforeBodyClose`
+
+## License Management
+- Plugins can be purchased from marketplace.leantime.io
+- License keys are perpetual but restricted by number of users
+- System checks active users regularly against server
+- Plugins disabled if user limit exceeded (data remains in database)
+
+## HelloWorld Plugin Example
+
+Based on the official Leantime documentation, here's the standard plugin structure:
+
+### composer.json
+```json
+{
+    "name": "leantime/helloworld",
+    "description": "A simple Hello World plugin for Leantime",
+    "version": "1.0.0",
+    "type": "leantime-plugin",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Leantime\\Plugins\\HelloWorld\\": "/"
+        }
+    }
+}
+```
+
+### register.php
+```php
+use Leantime\Domain\Plugins\Services\Registration;
+
+$registration = app()->makeWith(Registration::class, ['pluginId' => 'HelloWorld']);
+
+// Register languages
+$registration->registerLanguageFiles(['en-US']);
+
+// Add menu item
+$registration->addMenuItem([
+    'title' => 'helloworld.menu.title',
+    'icon' => 'fa fa-smile',
+    'tooltip' => 'helloworld.menu.tooltip',
+    'href' => '/hello-world/show',
+], 'personal', [10]);
+```
+
+### Controller Example
+```php
+namespace Leantime\Plugins\HelloWorld\Controllers;
+
+class HelloWorldController extends Controller
+{
+    public function show()
+    {
+        return $this->tpl->display('plugins.helloworld.show');
+    }
+}
+```
+
+### View Example (Blade Template)
+```blade
+@extends($layout)
+
+@section('content')
+    <div class="pageheader">
+        <div class="pageicon"><i class="fa fa-smile"></i></div>
+        <div class="pagetitle">
+            <h1>{{ __('helloworld.headline') }}</h1>
+        </div>
+    </div>
+
+    <div class="maincontent">
+        <div class="maincontentinner">
+            <h3>{{ __('helloworld.text') }}</h3>
+        </div>
+    </div>
+@endsection
+```
+
+### Language File (en-US.ini)
+```ini
+helloworld.menu.title = "Hello World"
+helloworld.menu.tooltip = "A simple Hello World example"
+helloworld.headline = "Hello World Plugin"
+helloworld.text = "Hello from your first Leantime plugin!"
+```
+
+## Best Practices
+
+### Structure
+- Follow PSR-4 autoloading standards
+- Use proper namespaces
+- Organize files logically
+- Include proper documentation
+
+### Code Style
+- Follow PSR-12 coding standards
+- Use meaningful names
+- Document your code with PHPDoc
+- Follow existing Leantime patterns
+
+### Integration
+- Use the event system for hooks
+- Follow MVC pattern
+- Leverage existing components
+- Use the Registration service for setup
+
+### Translations
+- All user-facing strings in language files
+- Use clear, descriptive translation keys
+- Support multiple languages
+- Use `__()` helper function
+
+### Testing
+- Manual testing: menu items, page loads, translations, styling
+- Automated testing: unit tests for controllers, translation verification
+- Test routing and URL mapping
+
+## Common Issues and Solutions
+
+### Menu Not Showing
+- Check registration code in `register.php`
+- Verify menu section parameter
+- Check user permissions
+- Ensure plugin is enabled
+
+### Translations Missing
+- Verify language file is registered
+- Check INI file syntax
+- Confirm translation keys match
+- Ensure language file is in correct directory
+
+### View Not Loading
+- Check view path in controller
+- Verify Blade template syntax
+- Confirm controller return statement
+- Check template file exists
+
+### Controller Not Found
+- Verify URL structure matches controller namespace
+- Check plugin is enabled
+- Ensure controller class exists
+- Verify method name matches URL
+
+## CLI Plugin Management
+
+Leantime provides a comprehensive CLI for plugin management through `php bin/leantime [command]`:
+
+### Plugin Lifecycle Commands
+```bash
+# List all available plugins
+php bin/leantime plugin:list
+
+# List only installed plugins
+php bin/leantime plugin:list --installed=true
+
+# List only enabled plugins
+php bin/leantime plugin:list --enabled=true
+
+# Install a plugin (from folder/phar)
+php bin/leantime plugin:install PluginName
+
+# Enable a plugin
+php bin/leantime plugin:enable PluginName
+
+# Disable a plugin
+php bin/leantime plugin:disable PluginName
+
+# Remove a plugin (executes uninstall hook)
+php bin/leantime plugin:remove PluginName
+```
+
+### Typical Plugin Development Workflow
+```bash
+# 1. Mount plugin folder (Docker) or place in app/Plugins/
+# 2. Install the plugin
+php bin/leantime plugin:install Pomodoro
+
+# 3. Enable the plugin
+php bin/leantime plugin:enable Pomodoro
+
+# 4. Clear caches to ensure changes take effect
+php bin/leantime cache:clearAll
+
+# 5. Run migrations if plugin has database changes
+php bin/leantime migrate
+```
+
+### CLI Architecture
+- Commands extend `AbstractPluginCommand` for plugin-specific functionality
+- Uses Symfony Console components for command structure
+- Integrates with Laravel's service container
+- Supports interactive and non-interactive modes
+- Includes confirmation prompts for destructive operations
+
+### Plugin Discovery
+The CLI automatically discovers plugins by:
+1. Scanning `app/Plugins/` directory for folders
+2. Reading `composer.json` files for metadata
+3. Checking for `register.php` files
+4. Validating plugin structure and dependencies
+
+## Development Guidelines
+- Follow same security standards as core application
+- Validate plugin inputs and outputs
+- Don't expose internal system information through plugin APIs
+- Follow principle of least privilege for plugin permissions
+- Use proper PSR-4 autoloading in composer.json
+- Include proper PHPDoc comments for API methods
+- Test thoroughly before deployment
+- Follow Leantime coding standards and patterns
+- Use CLI commands for plugin management and testing

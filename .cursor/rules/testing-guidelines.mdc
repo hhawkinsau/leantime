@@ -1,0 +1,61 @@
+---
+description: Testing strategy and guidelines
+---
+
+# Testing Guidelines
+
+## Testing Tools
+- **PHPStan** for static analysis
+- **PHP_CodeSniffer** for code style
+- **PHPUnit** for unit testing
+- **Codeception** for acceptance testing
+
+## Testing Strategy
+
+### When to Run Tests
+- **Before making changes**: Run relevant tests to establish baseline
+- **During development**: Run unit tests for specific domain being modified
+- **After implementation**: Run full test suite for affected areas
+- **Before committing**: Always run code style checks and static analysis
+
+### Test Selection Guidelines
+- **API changes**: Run API-specific acceptance tests (`-g api`)
+- **Domain-specific changes**: Run tests for that domain (e.g., `-g timesheet`)
+- **Core changes**: Run full test suite
+- **Frontend changes**: Test both functionality and styling
+
+### Test Commands
+```bash
+# Run static analysis
+make phpstan
+
+# Run code style checks
+make test-code-style
+
+# Fix code style issues
+make fix-code-style
+
+# Run unit tests
+make unit-test
+
+# Run acceptance tests
+make acceptance-test
+
+# Run specific acceptance test groups
+# For API tests:
+docker compose --file .dev/docker-compose.yaml --file .dev/docker-compose.tests.yaml exec leantime-dev php vendor/bin/codecept run -g api --steps
+
+# For timesheet tests:
+docker compose --file .dev/docker-compose.yaml --file .dev/docker-compose.tests.yaml exec leantime-dev php vendor/bin/codecept run -g timesheet --steps
+```
+
+## Test Failure Handling
+- **Never ignore test failures**
+- Fix failing tests before proceeding with new functionality
+- If tests are legitimately outdated, update them as part of the task
+
+## Test Organization
+- Unit tests in `tests/Unit/`
+- Acceptance tests in `tests/Acceptance/`
+- Tests should cover both happy path and edge cases
+- Mock external dependencies appropriately
